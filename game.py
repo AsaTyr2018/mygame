@@ -38,15 +38,30 @@ class Miner(Entity):
         )
         self.node = node
         self.timer = 0
+        self.container = None
 
     def update(self):
         self.timer += time.dt
         if self.timer >= 10:
-            resources[self.node.resource_type] += 1
-            hud.update_text()
-            inventory_menu.update_text()
+            if self.container is not None:
+                self.container.deposit(self.node.resource_type, 1)
             self.timer = 0
 
+class StorageContainer(Entity):
+    """Simple storage placed next to a miner to collect resources."""
+    def __init__(self, position):
+        super().__init__(
+            model='cube',
+            color=color.brown,
+            collider='box',
+            position=position,
+            scale=1,
+        )
+        self.contents = {'stone': 0, 'iron': 0, 'copper': 0}
+
+    def deposit(self, resource_type, amount=1):
+        if resource_type in self.contents:
+            self.contents[resource_type] += amount
 
 def generate_world(seed):
     """Create resource nodes using a seed for reproducibility."""
@@ -91,11 +106,48 @@ class InventoryMenu(Entity):
         lines=[f"{k.capitalize()}: {v}" for k,v in resources.items()]
         self.text.text="\n".join(lines)
 
+class ContainerMenu(Entity):
+    """UI for interacting with storage containers."""
+    def __init__(self):
+        super().__init__(parent=camera.ui, enabled=False)
+        self.bg = Panel(parent=self, scale=(0.3,0.2), color=color.rgba(0,0,0,180))
+        self.text = Text(parent=self, text='', origin=(0,0), scale=2)
+        self.take_all_button = Button(text='Take All', parent=self, scale=(0.2,0.05), position=(0,-0.07))
+        self.take_all_button.on_click=self.take_all
+        self.container = None
+
+    def toggle(self, container=None):
+        if not self.enabled and container is not None:
+            self.container = container
+            self.update_text()
+        self.enabled = not self.enabled
+        mouse.locked = not self.enabled
+        player.enabled = not self.enabled
+
+    def update_text(self):
+        if self.container:
+            lines=[f"{k.capitalize()}: {v}" for k,v in self.container.contents.items()]
+            self.text.text="\n".join(lines)
+        else:
+            self.text.text=""
+
+    def take_all(self):
+        if not self.container:
+            return
+        for r,v in self.container.contents.items():
+            resources[r] += v
+            self.container.contents[r] = 0
+        self.update_text()
+        hud.update_text()
+        inventory_menu.update_text()
 class BuildingMenu(Entity):
+
     """Menu for selecting buildings to place."""
     def __init__(self):
         super().__init__(parent=camera.ui, enabled=False)
         self.bg = Panel(parent=self, scale=(0.3,0.2), color=color.rgba(0,0,0,180))
+        self.container_button=Button(text='Place Container', parent=self, scale=(0.2,0.05), position=(0,-0.06))
+        self.container_button.on_click=self.place_container
         self.miner_button=Button(text='Place Miner', parent=self, scale=(0.2,0.05), position=(0,0))
         self.miner_button.on_click=self.place_miner
     def toggle(self):
@@ -104,7 +156,11 @@ class BuildingMenu(Entity):
         player.enabled = not self.enabled
     def place_miner(self):
         global build_mode
-        build_mode=True
+        build_mode='miner'
+        self.toggle()
+    def place_container(self):
+        global build_mode
+        build_mode='container'
         self.toggle()
 
 class EscapeMenu(Entity):
@@ -138,23 +194,29 @@ world_seed = random.randint(0, 2**32 - 1)
 nodes = generate_world(world_seed)
 miners = []
 hud = ResourceHUD()
+containers = []
 inventory_menu = InventoryMenu()
 building_menu = BuildingMenu()
+container_menu = ContainerMenu()
 
-build_mode = False
+build_mode = None
 
 
 def new_game():
-    global nodes, miners, resources, world_seed
+    global nodes, miners, containers, resources, world_seed, build_mode
     for m in miners:
         destroy(m)
     miners.clear()
+    for c in containers:
+        destroy(c)
+    containers.clear()
     for n in nodes:
         destroy(n)
     world_seed = random.randint(0, 2**32 - 1)
     nodes = generate_world(world_seed)
-    resources = {"stone": 0, "iron": 0, "copper": 0}
+    resources = {'stone': 0, 'iron': 0, 'copper': 0}
     player.position = Vec3(0,0,0)
+    build_mode = None
     hud.update_text()
     inventory_menu.update_text()
 def save_game():
@@ -169,7 +231,7 @@ def save_game():
 
 
 def load_game():
-    global nodes, miners, resources, world_seed
+    global nodes, miners, containers, resources, world_seed, build_mode
     try:
         with open("save.json", "r") as f:
             data = json.load(f)
@@ -179,13 +241,17 @@ def load_game():
     for m in miners:
         destroy(m)
     miners.clear()
+    for c in containers:
+        destroy(c)
+    containers.clear()
     for n in nodes:
         destroy(n)
     world_seed = data.get("seed", random.randint(0, 2**32 - 1))
     nodes = generate_world(world_seed)
-    resources = data.get("resources", {"stone": 0, "iron": 0, "copper": 0})
+    resources = data.get("resources", {'stone': 0, 'iron': 0, 'copper': 0})
     pos = data.get("position", [0, 0, 0])
     player.position = Vec3(*pos)
+    build_mode = None
     hud.update_text()
     inventory_menu.update_text()
     print("Game loaded")
@@ -193,6 +259,11 @@ escape_menu = EscapeMenu()
 
 
 def input(key):
+    if key == 'e':
+        for c in containers:
+            if distance(player.position, c.position) < 3:
+                container_menu.toggle(c)
+                return
     if key == 'i':
         inventory_menu.toggle()
     if key == 'b':
@@ -210,7 +281,7 @@ def input(key):
 
 def update():
     global build_mode
-    if inventory_menu.enabled or building_menu.enabled or escape_menu.enabled:
+    if inventory_menu.enabled or building_menu.enabled or escape_menu.enabled or container_menu.enabled:
         return
     if held_keys['e']:
         for node in nodes:
@@ -219,7 +290,7 @@ def update():
                 hud.update_text()
                 inventory_menu.update_text()
                 break
-    if build_mode and mouse.left:
+    if build_mode == 'miner' and mouse.left:
         for node in nodes:
             if distance(player.position, node.position) < 3 and node.miner is None:
                 cost = {'stone': 5, 'iron': 3, 'copper': 2}
@@ -232,5 +303,18 @@ def update():
                     miners.append(miner)
                     node.miner = miner
                 break
-app.run()
+        build_mode = None
+    elif build_mode == 'container' and mouse.left:
+        for m in miners:
+            if distance(player.position, m.position) < 3 and m.container is None:
+                cost = {'stone': 5}
+                if resources['stone'] >= cost['stone']:
+                    resources['stone'] -= cost['stone']
+                    hud.update_text()
+                    inventory_menu.update_text()
+                    cont = StorageContainer(m.position + Vec3(1,0,0))
+                    containers.append(cont)
+                    m.container = cont
+                break
+        build_mode = None
 
