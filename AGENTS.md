@@ -56,4 +56,27 @@ ZUSÄTZLICHE REGELN:
 - Miner dürfen nicht überlappend platziert werden.
 - Ressourcenlager ist unbegrenzt.
 
-ENDE DER ANWEISUNG
+Ordnerstruktur
+project_root/
+│
+├── main.py              # Startet das Spiel
+├── world_generator.py   # Weltaufbau und Ressourcennodes
+├── entities/
+│   ├── player.py        # FirstPersonPlayer mit Zusatzlogik
+│   ├── resource_node.py # ResourceNode + Miner
+│   └── hud.py           # Ressourcen-HUD
+├── systems/
+│   └── build_system.py  # Platzierungslogik, Bau-Checks
+├── data/
+│   └── resource_pool.py # Zentrale Ressourcendaten
+└── assets/              # (optional später für Texturen etc.)
+
+Grundidee: Komponentenlogik
+main.py: Initialisiert Engine, lädt Module, startet Spiel
+resource_node.py: Enthält ResourceNode und Miner
+player.py: Erweiterter FirstPersonController mit Interaktion
+hud.py: Anzeige aller Ressourcen, evtl. später mit Health, Strom etc.
+build_system.py: Logik zum Platzieren von Gebäuden
+resource_pool.py: Globale resources = {} Variable + Methoden wie can_afford(), spend() usw.
+
+
