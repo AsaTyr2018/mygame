@@ -204,7 +204,8 @@ container_menu = ContainerMenu()
 build_mode = None
 
 mine_timer = 0
-PLAYER_MINE_INTERVAL = 10
+# Reduce manual mining delay so resources can be gathered more easily
+PLAYER_MINE_INTERVAL = 2
 def new_game():
     global nodes, miners, containers, resources, world_seed, build_mode
     for m in miners:
