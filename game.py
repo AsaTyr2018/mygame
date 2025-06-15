@@ -135,7 +135,6 @@ miners = []
 hud = ResourceHUD()
 inventory_menu = InventoryMenu()
 building_menu = BuildingMenu()
-escape_menu = EscapeMenu()
 
 build_mode = False
 
@@ -158,6 +157,7 @@ def save_game():
         json.dump({'resources': resources}, f)
     print('Game saved')
 
+escape_menu = EscapeMenu()
 
 
 def input(key):
