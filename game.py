@@ -148,9 +148,9 @@ class BuildingMenu(Entity):
     def __init__(self):
         super().__init__(parent=camera.ui, enabled=False)
         self.bg = Panel(parent=self, scale=(0.3,0.2), color=color.rgba(0,0,0,180))
-        self.container_button=Button(text='Place Container', parent=self, scale=(0.2,0.05), position=(0,-0.06))
+        self.container_button=Button(text='Place Container\n(5 Stone)', parent=self, scale=(0.2,0.05), position=(0,-0.06))
         self.container_button.on_click=self.place_container
-        self.miner_button=Button(text='Place Miner', parent=self, scale=(0.2,0.05), position=(0,0))
+        self.miner_button=Button(text='Place Miner\n(5 Stone, 3 Iron, 2 Copper)', parent=self, scale=(0.2,0.05), position=(0,0))
         self.miner_button.on_click=self.place_miner
     def toggle(self):
         self.enabled = not self.enabled
