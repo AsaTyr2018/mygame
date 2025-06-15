@@ -2,7 +2,8 @@ from ursina import *
 from ursina.prefabs.first_person_controller import FirstPersonController
 import random
 import json
-
+# Global seed used to generate the world so it can be reproduced on load
+world_seed = None
 
 class ResourceNode(Entity):
     """A simple resource node that can be mined by the player."""
@@ -47,12 +48,13 @@ class Miner(Entity):
             self.timer = 0
 
 
-def generate_world():
-    """Create resource nodes at random positions."""
+def generate_world(seed):
+    """Create resource nodes using a seed for reproducibility."""
+    rng = random.Random(seed)
     nodes = []
-    for resource_type in ['stone', 'iron', 'copper']:
+    for resource_type in ["stone", "iron", "copper"]:
         for _ in range(5):
-            pos = Vec3(random.uniform(-20, 20), 0, random.uniform(-20, 20))
+            pos = Vec3(rng.uniform(-20, 20), 0, rng.uniform(-20, 20))
             node = ResourceNode(resource_type, position=pos)
             nodes.append(node)
     return nodes
@@ -114,7 +116,9 @@ class EscapeMenu(Entity):
         self.new_button.on_click=new_game
         self.save_button=Button(text='Save Game', parent=self, scale=(0.2,0.05), position=(0,0))
         self.save_button.on_click=save_game
-        self.exit_button=Button(text='Exit', parent=self, scale=(0.2,0.05), position=(0,-0.1))
+        self.load_button=Button(text="Load Game", parent=self, scale=(0.2,0.05), position=(0,-0.05))
+        self.load_button.on_click=load_game
+        self.exit_button=Button(text='Exit', parent=self, scale=(0.2,0.05), position=(0,-0.15))
         self.exit_button.on_click=application.quit
     def toggle(self):
         self.enabled = not self.enabled
@@ -130,7 +134,8 @@ player = FirstPersonController()
 player.cursor.visible = True
 
 resources = {'stone': 0, 'iron': 0, 'copper': 0}
-nodes = generate_world()
+world_seed = random.randint(0, 2**32 - 1)
+nodes = generate_world(world_seed)
 miners = []
 hud = ResourceHUD()
 inventory_menu = InventoryMenu()
@@ -140,23 +145,50 @@ build_mode = False
 
 
 def new_game():
-    global nodes, miners, resources
+    global nodes, miners, resources, world_seed
     for m in miners:
         destroy(m)
     miners.clear()
     for n in nodes:
         destroy(n)
-    nodes = generate_world()
-    resources = {'stone': 0, 'iron': 0, 'copper': 0}
+    world_seed = random.randint(0, 2**32 - 1)
+    nodes = generate_world(world_seed)
+    resources = {"stone": 0, "iron": 0, "copper": 0}
+    player.position = Vec3(0,0,0)
     hud.update_text()
     inventory_menu.update_text()
-
-
 def save_game():
-    with open('save.json', 'w') as f:
-        json.dump({'resources': resources}, f)
-    print('Game saved')
+    data = {
+        "seed": world_seed,
+        "resources": resources,
+        "position": [float(player.position.x), float(player.position.y), float(player.position.z)]
+    }
+    with open("save.json", "w") as f:
+        json.dump(data, f)
+    print("Game saved")
 
+
+def load_game():
+    global nodes, miners, resources, world_seed
+    try:
+        with open("save.json", "r") as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        print("No save file")
+        return
+    for m in miners:
+        destroy(m)
+    miners.clear()
+    for n in nodes:
+        destroy(n)
+    world_seed = data.get("seed", random.randint(0, 2**32 - 1))
+    nodes = generate_world(world_seed)
+    resources = data.get("resources", {"stone": 0, "iron": 0, "copper": 0})
+    pos = data.get("position", [0, 0, 0])
+    player.position = Vec3(*pos)
+    hud.update_text()
+    inventory_menu.update_text()
+    print("Game loaded")
 escape_menu = EscapeMenu()
 
 
