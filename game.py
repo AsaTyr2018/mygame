@@ -157,11 +157,11 @@ class BuildingMenu(Entity):
         mouse.locked = not self.enabled
         player.enabled = not self.enabled
     def place_miner(self):
-        global build_mode
+        global build_mode, mine_timer
         build_mode='miner'
         self.toggle()
     def place_container(self):
-        global build_mode
+        global build_mode, mine_timer
         build_mode='container'
         self.toggle()
 
@@ -283,7 +283,7 @@ def input(key):
 
 
 def update():
-    global build_mode
+    global build_mode, mine_timer
     if inventory_menu.enabled or building_menu.enabled or escape_menu.enabled or container_menu.enabled:
         return
     if held_keys["e"]:
