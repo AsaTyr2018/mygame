@@ -29,7 +29,7 @@ class ResourceNode(Entity):
 class Miner(Entity):
     """Automated resource generator placed on a node."""
 
-    def __init__(self, node):
+    def __init__(self, node, yield_amount=3, interval=10):
         super().__init__(
             model='cube',
             color=color.yellow,
@@ -39,12 +39,14 @@ class Miner(Entity):
         self.node = node
         self.timer = 0
         self.container = None
+        self.yield_amount = yield_amount
+        self.interval = interval
 
     def update(self):
         self.timer += time.dt
-        if self.timer >= 10:
+        if self.timer >= self.interval:
             if self.container is not None:
-                self.container.deposit(self.node.resource_type, 1)
+                self.container.deposit(self.node.resource_type, self.yield_amount)
             self.timer = 0
 
 class StorageContainer(Entity):
@@ -201,7 +203,8 @@ container_menu = ContainerMenu()
 
 build_mode = None
 
-
+mine_timer = 0
+PLAYER_MINE_INTERVAL = 10
 def new_game():
     global nodes, miners, containers, resources, world_seed, build_mode
     for m in miners:
@@ -283,14 +286,19 @@ def update():
     global build_mode
     if inventory_menu.enabled or building_menu.enabled or escape_menu.enabled or container_menu.enabled:
         return
-    if held_keys['e']:
-        for node in nodes:
-            if distance(player.position, node.position) < 3 and node.miner is None:
-                resources[node.resource_type] += 1
-                hud.update_text()
-                inventory_menu.update_text()
-                break
-    if build_mode == 'miner' and mouse.left:
+    if held_keys["e"]:
+        mine_timer += time.dt
+        if mine_timer >= PLAYER_MINE_INTERVAL:
+            for node in nodes:
+                if distance(player.position, node.position) < 3 and node.miner is None:
+                    resources[node.resource_type] += 1
+                    hud.update_text()
+                    inventory_menu.update_text()
+                    mine_timer = 0
+                    break
+    else:
+        mine_timer = 0
+    if build_mode == "miner" and mouse.left:
         for node in nodes:
             if distance(player.position, node.position) < 3 and node.miner is None:
                 cost = {'stone': 5, 'iron': 3, 'copper': 2}
