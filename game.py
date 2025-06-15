@@ -78,7 +78,7 @@ class InventoryMenu(Entity):
     """Display inventory contents."""
     def __init__(self):
         super().__init__(parent=camera.ui, enabled=False)
-        self.bg = Panel(scale=(0.4, 0.3), color=color.rgba(0,0,0,180))
+        self.bg = Panel(parent=self, scale=(0.4, 0.3), color=color.rgba(0,0,0,180))
         self.text = Text(parent=self, text='', origin=(0,0), scale=2)
         self.update_text()
     def toggle(self):
@@ -93,7 +93,7 @@ class BuildingMenu(Entity):
     """Menu for selecting buildings to place."""
     def __init__(self):
         super().__init__(parent=camera.ui, enabled=False)
-        self.bg = Panel(scale=(0.3,0.2), color=color.rgba(0,0,0,180))
+        self.bg = Panel(parent=self, scale=(0.3,0.2), color=color.rgba(0,0,0,180))
         self.miner_button=Button(text='Place Miner', parent=self, scale=(0.2,0.05), position=(0,0))
         self.miner_button.on_click=self.place_miner
     def toggle(self):
@@ -109,7 +109,7 @@ class EscapeMenu(Entity):
     """Escape menu with game options."""
     def __init__(self):
         super().__init__(parent=camera.ui, enabled=False)
-        self.bg = Panel(scale=(0.3,0.3), color=color.rgba(0,0,0,180))
+        self.bg = Panel(parent=self, scale=(0.3,0.3), color=color.rgba(0,0,0,180))
         self.new_button=Button(text='New Game', parent=self, scale=(0.2,0.05), position=(0,0.1))
         self.new_button.on_click=new_game
         self.save_button=Button(text='Save Game', parent=self, scale=(0.2,0.05), position=(0,0))
