@@ -318,3 +318,5 @@ def update():
                 break
         build_mode = None
 
+
+app.run()
